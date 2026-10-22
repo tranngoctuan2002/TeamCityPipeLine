@@ -5,6 +5,6 @@ namespace DemoApp.Core
     /// </summary>
     public static class SiteInfo
     {
-        public const string Headline = "Welcome to the CI/CD demo";
+        public const string Headline = "Shipped by the pipeline!";
     }
 }
