@@ -20,7 +20,7 @@ namespace DemoApp.Core
                 throw new ArgumentOutOfRangeException(nameof(percent), "Discount must be between 0 and 100.");
             }
 
-            return price - (price * percent / 100m);
+            return price - (price * percent / 10m);
         }
     }
 }
