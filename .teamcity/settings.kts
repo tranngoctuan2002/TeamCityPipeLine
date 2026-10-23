@@ -23,7 +23,7 @@ project {
     vcsRoot(DemoRepo)
 
     params {
-        param("demo.repo.url", "https://github.com/your-org/cicd-demo-kit.git")
+        param("demo.repo.url", "https://github.com/tranngoctuan2002/TeamCityPipeLine.git")
 
         // IIS site folders and URLs (see README: one IIS site per pipeline/environment)
         param("site.current.path", """C:\inetpub\cicd-demo-current""")
