@@ -8,14 +8,20 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 
+if (-not $ExpectedVersion) {
+    throw "No version to expect: pass -ExpectedVersion, or run this after deploy.ps1 (it sets env.DEPLOYED_VERSION)."
+}
+
 $healthUrl = $Url.TrimEnd('/') + '/Health.ashx'
-Write-Host "Smoke test: $healthUrl (expecting version $ExpectedVersion)"
+# Exact match: "OK 1.0.12" must not pass when we expect 1.0.1.
+$expected = "OK $ExpectedVersion"
+Write-Host "Smoke test: $healthUrl (expecting '$expected')"
 
 for ($i = 1; $i -le $Attempts; $i++) {
     try {
         $response = Invoke-WebRequest -Uri $healthUrl -UseBasicParsing -TimeoutSec 15
         $body = $response.Content.Trim()
-        if ($response.StatusCode -eq 200 -and $body.StartsWith('OK') -and (-not $ExpectedVersion -or $body.Contains($ExpectedVersion))) {
+        if ($response.StatusCode -eq 200 -and $body -eq $expected) {
             Write-Host "Smoke test passed: $body"
             exit 0
         }
