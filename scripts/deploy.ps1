@@ -13,10 +13,11 @@ if (-not $ApiKey) {
     throw "ApiKey for $Environment is empty. Set the env.DEMO_API_KEY password parameter of this deploy build (see docs/pipeline.md)."
 }
 
-$zip = Get-ChildItem -Path $ArtifactDir -Filter 'DemoApp.Web.*.zip' | Select-Object -First 1
-if (-not $zip) {
-    throw "No DemoApp.Web.*.zip found in '$ArtifactDir'. Check the artifact dependency."
+$zips = @(Get-ChildItem -Path $ArtifactDir -Filter 'DemoApp.Web.*.zip')
+if ($zips.Count -ne 1) {
+    throw "Expected exactly one DemoApp.Web.*.zip in '$ArtifactDir', found $($zips.Count). Check the artifact dependency."
 }
+$zip = $zips[0]
 
 $version = $zip.BaseName.Substring('DemoApp.Web.'.Length)
 Write-Host "Deploying version $version to $Environment ($TargetPath)"

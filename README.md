@@ -44,7 +44,7 @@ git revert --no-edit -m 1 HEAD && git push                     # after the demo:
 
 ### 1. Build agent (Windows)
 
-- Visual Studio Build Tools 2022 with **MSBuild** and **Web development build tools**
+- Visual Studio Build Tools 2022 with **MSBuild**, **Web development build tools** and the **.NET SDK** component
 - .NET Framework 4.8 Developer Pack
 - .NET SDK 8 (runs the NUnit tests with `dotnet test`)
 - IIS with ASP.NET 4.8 enabled; the agent's service account needs write access to `C:\inetpub\cicd-demo-*`
@@ -82,7 +82,7 @@ git push -u origin main demo/1-new-headline demo/2-discount-bug
 2. TeamCity detects `.teamcity/settings.kts`; choose **Import settings from .teamcity/settings.kts**.
 3. If TeamCity reports a DSL version mismatch, set `version = "..."` at the top of `settings.kts` to the version it shows, commit, push.
 4. Set `demo.repo.url` to your repo URL (in `settings.kts`), and VCS credentials in the VCS root if the repo is private.
-5. Secret: **Project Settings > Versioned Settings > Tokens > Generate token**, value e.g. `demo-staging-key`, then paste the `credentialsJSON:...` token as the value of `demo.apiKey` in `settings.kts`.
+5. Secrets, one per environment: **Project Settings > Versioned Settings > Tokens > Generate token** for the Staging key and again for the Production key, then paste each `credentialsJSON:...` token as `apiKeyToken` of `DeployStaging` / `DeployProduction` in `settings.kts`. A deploy with an empty key fails on purpose. Details: [docs/pipeline.md](docs/pipeline.md).
 6. Run each build once by hand: `Build and copy to server`, `CI build` (Deploy to Staging follows automatically), `Deploy to Production`.
 7. Check all three sites show **90.00**, and Staging/Production show a version like `1.0.1`.
 

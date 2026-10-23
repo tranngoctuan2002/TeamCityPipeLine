@@ -264,6 +264,8 @@ open class DeployBuild(
                 onDependencyFailure = FailureAction.FAIL_TO_START
             }
             artifacts {
+                // Clean: a zip left from an earlier run must never be the one deployed (rollback!).
+                cleanDestination = true
                 artifactRules = "DemoApp.Web.*.zip => artifact"
             }
         }
