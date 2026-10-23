@@ -32,10 +32,6 @@ project {
         param("site.staging.url", "http://localhost:8082")
         param("site.production.path", """C:\inetpub\cicd-demo-production""")
         param("site.production.url", "http://localhost:8083")
-
-        // A secret: generate a token in Versioned Settings > Tokens and paste it here
-        // as "credentialsJSON:<token>". Never commit the real value.
-        password("demo.apiKey", "")
     }
 
     subProject(CurrentPipeline)
@@ -190,10 +186,13 @@ object ImprovedCi : BuildType({
     }
 })
 
+// Secrets: one per environment. Generate a token in Versioned Settings > Tokens and paste
+// "credentialsJSON:<token>" below. Never commit the real value. Empty = the deploy fails.
 object DeployStaging : DeployBuild(
     envName = "Staging",
     sitePathParam = "site.staging.path",
     siteUrlParam = "site.staging.url",
+    apiKeyToken = "",
     deployAutomatically = true
 )
 
@@ -201,6 +200,7 @@ object DeployProduction : DeployBuild(
     envName = "Production",
     sitePathParam = "site.production.path",
     siteUrlParam = "site.production.url",
+    apiKeyToken = "",
     deployAutomatically = false // manual run = the approval step
 )
 
@@ -213,12 +213,17 @@ open class DeployBuild(
     envName: String,
     sitePathParam: String,
     siteUrlParam: String,
+    apiKeyToken: String,
     deployAutomatically: Boolean
 ) : BuildType({
     id("Deploy$envName")
     name = "Deploy to $envName"
     type = BuildTypeSettings.Type.DEPLOYMENT
     maxRunningBuilds = 1
+
+    params {
+        password("env.DEMO_API_KEY", apiKeyToken)
+    }
 
     vcs {
         root(DemoRepo) // only for the deploy scripts, at the same revision as the artifact
@@ -228,7 +233,7 @@ open class DeployBuild(
         powerShell {
             name = "7 + 8. Config per environment, deploy the artifact"
             scriptMode = file { path = "scripts/deploy.ps1" }
-            scriptArgs = "-ArtifactDir artifact -TargetPath \"%$sitePathParam%\" -Environment $envName -ApiKey \"%demo.apiKey%\""
+            scriptArgs = "-ArtifactDir artifact -TargetPath \"%$sitePathParam%\" -Environment $envName"
         }
         powerShell {
             name = "9. Smoke test"
@@ -236,11 +241,10 @@ open class DeployBuild(
             scriptArgs = "-Url %$siteUrlParam%"
         }
         powerShell {
-            name = "10. Notify the team"
-            scriptMode = script {
-                // Shows in the build status; add the Notifications build feature for Slack/Teams/email.
-                content = "Write-Host \"##teamcity[buildStatus text='Deployed {build.number} to $envName']\""
-            }
+            // Shows in the build status; add the Notifications build feature for Slack/Teams/email.
+            name = "10. Set build status"
+            scriptMode = file { path = "scripts/set-status.ps1" }
+            scriptArgs = "-Environment $envName"
         }
     }
 

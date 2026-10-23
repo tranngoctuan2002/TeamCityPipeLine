@@ -4,9 +4,14 @@ param(
     [Parameter(Mandatory = $true)][string]$ArtifactDir,
     [Parameter(Mandatory = $true)][string]$TargetPath,
     [Parameter(Mandatory = $true)][string]$Environment,
-    [string]$ApiKey = ''
+    # From the TeamCity password parameter env.DEMO_API_KEY (an env var keeps it off the command line).
+    [string]$ApiKey = $env:DEMO_API_KEY
 )
 $ErrorActionPreference = 'Stop'
+
+if (-not $ApiKey) {
+    throw "ApiKey for $Environment is empty. Set the env.DEMO_API_KEY password parameter of this deploy build (see docs/pipeline.md)."
+}
 
 $zip = Get-ChildItem -Path $ArtifactDir -Filter 'DemoApp.Web.*.zip' | Select-Object -First 1
 if (-not $zip) {
@@ -35,15 +40,17 @@ New-Item -Path $TargetPath -ItemType Directory -Force | Out-Null
 $offline = Join-Path $TargetPath 'app_offline.htm'
 Set-Content -Path $offline -Value '<h1>Deploying a new version, back in a moment.</h1>'
 
-robocopy $staging $TargetPath /MIR /XF app_offline.htm /NFL /NDL /NJH /NJS /NP | Out-Null
+# /R /W: robocopy's default is 1,000,000 retries 30 s apart, so one locked file would hang the build.
+robocopy $staging $TargetPath /MIR /XF app_offline.htm /R:3 /W:5 /NFL /NDL /NJH /NJS /NP | Out-Null
 $copyResult = $LASTEXITCODE
-Remove-Item $offline -Force
 Remove-Item $staging -Recurse -Force
 
 # robocopy: exit codes 0-7 mean success, 8 and above mean failure.
+# On failure app_offline.htm stays, so users never get a half-copied site; re-run or roll back.
 if ($copyResult -ge 8) {
-    throw "robocopy failed with exit code $copyResult"
+    throw "robocopy failed with exit code $copyResult. The site stays offline (app_offline.htm) until a deploy succeeds."
 }
+Remove-Item $offline -Force
 
 Write-Host "Deployed $version to $Environment"
 exit 0
