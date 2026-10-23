@@ -44,7 +44,7 @@ Show the **1. Current pipeline** build and its 7 steps. Name the four problems:
 ### 2. Demo 1: a change flows through (5-6 min)
 
 ```powershell
-git merge --ff-only origin/demo/1-new-headline
+git merge origin/demo/1-new-headline -m "New headline"
 git push
 ```
 

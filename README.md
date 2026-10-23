@@ -45,7 +45,7 @@ docs/                      setup, demo and pipeline guides
 During the demo you only merge and push, never type code (details in the [demo guide](docs/demo-guide.md)):
 
 ```
-git merge --ff-only origin/demo/1-new-headline && git push     # Demo 1
+git merge origin/demo/1-new-headline -m "New headline" && git push   # Demo 1
 git merge origin/demo/2-discount-bug -m "Apply discount change" && git push   # Demo 2
 git revert --no-edit -m 1 HEAD && git push                     # after the demo: undo the bug
 ```
