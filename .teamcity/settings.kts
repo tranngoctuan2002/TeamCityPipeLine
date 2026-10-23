@@ -1,5 +1,6 @@
 import jetbrains.buildServer.configs.kotlin.*
-import jetbrains.buildServer.configs.kotlin.buildSteps.dotnetTest
+import jetbrains.buildServer.configs.kotlin.buildFeatures.XmlReport
+import jetbrains.buildServer.configs.kotlin.buildFeatures.xmlReport
 import jetbrains.buildServer.configs.kotlin.buildSteps.powerShell
 import jetbrains.buildServer.configs.kotlin.triggers.finishBuildTrigger
 import jetbrains.buildServer.configs.kotlin.triggers.vcs
@@ -158,14 +159,22 @@ object ImprovedCi : BuildType({
             scriptMode = file { path = "scripts/build.ps1" }
             scriptArgs = "-Configuration Release -Version %build.number%"
         }
-        dotnetTest {
+        powerShell {
             name = "4. Unit tests"
-            projects = "tests/DemoApp.Tests/DemoApp.Tests.csproj"
-            configuration = "Release"
+            scriptMode = file { path = "scripts/test.ps1" }
+            scriptArgs = "-Configuration Release"
         }
         powerShell {
             name = "5. Quality gate"
             scriptMode = file { path = "scripts/quality-gate.ps1" }
+        }
+    }
+
+    features {
+        // Shows the results of scripts/test.ps1 on the Tests tab.
+        xmlReport {
+            reportType = XmlReport.XmlReportType.VSTEST
+            rules = "TestResults/*.trx"
         }
     }
 
