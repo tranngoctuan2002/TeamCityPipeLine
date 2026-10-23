@@ -1,27 +1,35 @@
 # Step "Quality gate" (improved pipeline): checks that FAIL the build, not just report.
 # Gate 1: no hard-coded secrets in application config files under src/.
+#   (config/current/ is not scanned: the old pipeline still needs its fake key; see docs/pipeline.md)
 # Add more gates here as the team adopts them, for example:
 #   - dotCover coverage threshold (TeamCity build feature + failure condition)
 #   - SonarQube quality gate (SonarScanner for MSBuild)
 #   - OWASP Dependency-Check for vulnerable NuGet packages
+# Self-check: scripts/tests/quality-gate.tests.ps1
+param(
+    [string]$Path = ''
+)
 . "$PSScriptRoot\common.ps1"
+
+if (-not $Path) { $Path = Join-Path $RepoRoot 'src' }
+
+$secretKey = '(?i)(password|passwd|pwd|secret|api[-_.]?key|token|credential)'
+$secretInConnection = '(?i)\b(password|pwd)\s*=\s*[^;%\s]'
 
 $problems = @()
 
-Get-ChildItem -Path (Join-Path $RepoRoot 'src') -Recurse -Include '*.config' | ForEach-Object {
+Get-ChildItem -Path $Path -Recurse -Include '*.config' | ForEach-Object {
     $file = $_
+    $name = $file.FullName.Replace("$RepoRoot\", '')
     [xml]$xml = Get-Content $file.FullName
-    $settings = $xml.SelectNodes('//appSettings/add')
-    foreach ($setting in $settings) {
-        $looksSecret = $setting.key -match '(?i)(password|secret|apikey|token)'
-        if ($looksSecret -and $setting.value) {
-            $problems += "$($file.FullName.Substring($RepoRoot.Length + 1)): '$($setting.key)' has a hard-coded value"
+    foreach ($setting in $xml.SelectNodes('//appSettings/add')) {
+        if ($setting.key -match $secretKey -and $setting.value) {
+            $problems += "${name}: '$($setting.key)' has a hard-coded value"
         }
     }
-    $connections = $xml.SelectNodes('//connectionStrings/add')
-    foreach ($connection in $connections) {
-        if ($connection.connectionString -match '(?i)password\s*=\s*[^;%]+') {
-            $problems += "$($file.FullName.Substring($RepoRoot.Length + 1)): connection string '$($connection.name)' contains a password"
+    foreach ($connection in $xml.SelectNodes('//connectionStrings/add')) {
+        if ($connection.connectionString -match $secretInConnection) {
+            $problems += "${name}: connection string '$($connection.name)' contains a password"
         }
     }
 }
@@ -31,4 +39,4 @@ if ($problems.Count -gt 0) {
     throw "Quality gate failed: $($problems.Count) hard-coded secret(s). Move them to TeamCity password parameters."
 }
 
-Write-Host "Quality gate passed: no hard-coded secrets in src/**/*.config"
+Write-Host "Quality gate passed: no hard-coded secrets in $Path\**\*.config"

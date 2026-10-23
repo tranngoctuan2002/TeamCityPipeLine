@@ -25,7 +25,7 @@ Each TeamCity step only calls a script in `scripts/`, so the logic is versioned 
 | 2 | Restore NuGet | `restore.ps1` | a package cannot be restored |
 | 3 | Build + version | `build.ps1 -Version %build.number%` | the build fails. Stamps `1.0.<counter>` into `AssemblyInformationalVersion` and publishes the site to `out/publish` |
 | 4 | Unit tests | `test.ps1` | any NUnit test fails. Results (`TestResults/*.trx`) appear on the **Tests** tab |
-| 5 | Quality gate | `quality-gate.ps1` | a `*.config` under `src/` holds a value for a key like password/secret/apikey/token, or a connection string holds a password |
+| 5 | Quality gate | `quality-gate.ps1` | a `*.config` under `src/` holds a value for a key like password/pwd/secret/api key/token/credential, or a connection string holds a literal `Password=`/`Pwd=` |
 | 6 | Publish artifact | artifact rule, no script | (artifact is published only if steps 1-5 all passed) |
 
 Build number format: `1.0.%build.counter%`. The same number is in the zip name, the DLL, the site footer and `/Health.ashx`.
@@ -105,6 +105,7 @@ The deploy scripts come from the same Git revision as the chosen CI build. Rolli
 .\scripts\build.ps1 -Configuration Release        # add -Version 1.0.999 to stamp a version
 .\scripts\test.ps1
 .\scripts\quality-gate.ps1
+.\scripts\tests\quality-gate.tests.ps1           # proves the gate passes clean configs and fails on secrets
 $env:DEMO_API_KEY = 'any-local-value'
 .\scripts\deploy.ps1 -ArtifactDir <folder with one zip> -TargetPath C:\temp\site -Environment Local
 ```
