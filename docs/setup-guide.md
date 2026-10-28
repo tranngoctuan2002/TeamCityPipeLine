@@ -103,6 +103,8 @@ Always import into a **new** project. Never enable versioned settings on the pro
 
 If TeamCity shows a DSL version or compile error, see Troubleshooting below.
 
+If TeamCity says `did not produce .teamcity/generated_settings.zip artifact`, open the failed "DSL settings generator job" build log. `POM file ...\.teamcity\pom.xml ... does not exist` means `.teamcity/pom.xml` is missing from the repo; it must be committed next to `settings.kts`.
+
 From now on settings change through Git: edit `settings.kts`, commit, push. TeamCity reloads within a minute or two.
 
 ## 6. Secrets (one per environment)
