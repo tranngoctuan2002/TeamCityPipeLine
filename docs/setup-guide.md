@@ -149,6 +149,7 @@ Tokens are references to values stored encrypted on the TeamCity server, so they
 | Build stays **queued** with "no compatible agents" | Agent not authorized, or not Windows | **Agents** > authorize; check the build's **Agent Requirements** |
 | Check tools: "MSBuild cannot build SDK-style projects" | .NET SDK component missing in Build Tools | Step 1 |
 | Check tools: "Microsoft.WebApplication.targets not found" | Web build tools workload missing | Step 1 |
+| Build: `CSC : error CS0006: Metadata file '...systemprofile\.nuget\packages\microsoft.netframework.referenceassemblies...' could not be found` | 32-bit `MSBuild.exe` run as SYSTEM restored the package into `C:\Windows\SysWOW64\config\systemprofile`, but the 64-bit compiler looks in `System32` | Use the 64-bit `MSBuild\Current\Bin\amd64\MSBuild.exe` (`Get-MSBuildPath` in `scripts/common.ps1` now prefers it) |
 | Restore fails with 401/403 or a timeout | Agent cannot reach nuget.org (proxy, firewall) | Allow outbound HTTPS to `api.nuget.org` |
 | Deploy: "Access to the path ... is denied" | Agent service account cannot write to `C:\inetpub\cicd-demo-*` | Run the agent as SYSTEM, or `icacls C:\inetpub\cicd-demo-* /grant "<user>:(OI)(CI)M"` |
 | Deploy: "ApiKey for Staging is empty" | Token not set | Step 6 |

@@ -18,6 +18,13 @@ function Get-MSBuildPath {
     if (-not $msbuild) {
         throw "MSBuild.exe not found. Install the MSBuild component of Visual Studio Build Tools."
     }
+
+    # Prefer the 64-bit MSBuild: a 32-bit one run as SYSTEM restores NuGet packages into the
+    # redirected SysWOW64 profile, where the 64-bit compiler cannot find them (CS0006).
+    $msbuild64 = Join-Path (Split-Path $msbuild) 'amd64\MSBuild.exe'
+    if (Test-Path $msbuild64) {
+        return $msbuild64
+    }
     return $msbuild
 }
 
