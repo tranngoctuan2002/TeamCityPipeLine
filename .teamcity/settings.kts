@@ -192,7 +192,7 @@ object DeployStaging : DeployBuild(
     envName = "Staging",
     sitePathParam = "site.staging.path",
     siteUrlParam = "site.staging.url",
-    apiKeyToken = "",
+    apiKeyToken = "credentialsJSON:abb7d0c3-efce-445b-9665-faab1bb2b9e5",
     deployAutomatically = true
 )
 
@@ -200,7 +200,7 @@ object DeployProduction : DeployBuild(
     envName = "Production",
     sitePathParam = "site.production.path",
     siteUrlParam = "site.production.url",
-    apiKeyToken = "",
+    apiKeyToken = "credentialsJSON:fe4b204f-7b0a-417c-9375-ca8bb0e090d6",
     deployAutomatically = false // manual run = the approval step
 )
 

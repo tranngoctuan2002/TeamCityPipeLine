@@ -105,6 +105,8 @@ If TeamCity shows a DSL version or compile error, see Troubleshooting below.
 
 If TeamCity says `did not produce .teamcity/generated_settings.zip artifact`, open the failed "DSL settings generator job" build log. `POM file ...\.teamcity\pom.xml ... does not exist` means `.teamcity/pom.xml` is missing from the repo; it must be committed next to `settings.kts`.
 
+The first DSL run downloads Maven libraries and can take 5-10 minutes. Do not click **Load project settings from VCS** repeatedly; each click queues another build. If the log (Administration > Diagnostics, or `teamcity-versioned-settings.log`) says `Cannot find the last committed revision of project ... disable / enable versioned settings`, open **Edit project > Versioned Settings**, set **Synchronization disabled** > Apply, then enable it again (Kotlin) and choose **Use settings from VCS**, never "Commit current project settings".
+
 From now on settings change through Git: edit `settings.kts`, commit, push. TeamCity reloads within a minute or two.
 
 ## 6. Secrets (one per environment)
