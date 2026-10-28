@@ -15,7 +15,7 @@ import jetbrains.buildServer.configs.kotlin.vcs.GitVcsRoot
  * Set `version` to the DSL version your TeamCity server shows under
  * Administration > Projects > <project> > Versioned Settings (e.g. "2024.03", "2024.12", "2025.03").
  */
-version = "2024.03"
+version = "2026.2"
 
 project {
     description = "CI/CD demo: today's pipeline next to the improved pipeline"

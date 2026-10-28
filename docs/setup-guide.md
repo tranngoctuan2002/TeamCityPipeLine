@@ -60,7 +60,7 @@ Check: **IIS Manager** lists `cicd-demo-current`, `cicd-demo-staging` and `cicd-
 2. Run the installer:
    - Components: **Build Agent** and **Server**, both as **Windows services**.
    - Server port: keep **8111**.
-   - Service accounts: keep **SYSTEM** for both. SYSTEM can already write to `C:\inetpub`.
+   - Service accounts: keep **SYSTEM** for both. SYSTEM can already write to `C:\inetpub`. (Demo only; use a dedicated low-privilege account for anything real.)
 3. Open `http://localhost:8111`:
    - Data directory: keep the default > **Proceed**.
    - Database: **Internal (HSQLDB)**. Fine for a demo.
@@ -70,20 +70,25 @@ Check: **IIS Manager** lists `cicd-demo-current`, `cicd-demo-staging` and `cicd-
 
 ## 4. Git repository
 
-1. Create an **empty** repository (no README) on GitHub, GitLab or similar. Private is fine.
+1. Create an **empty** repository (no README) on GitHub, GitLab or similar. Private is fine. It must be a repo **you** can push to; if you cloned someone else's, `origin` points at theirs and the push in step 4 will fail.
 2. For a private repo, create a personal access token that can read the repo. TeamCity uses it as the password.
 3. In `.teamcity/settings.kts` change:
    - `version = "2024.03"` to your TeamCity version from step 3 (e.g. `"2026.2"`);
    - `param("demo.repo.url", "...")` to the repo's HTTPS URL.
-4. Commit and push all branches:
+4. Create local copies of the demo branches (a fresh clone only has them as `origin/...`), then commit and push all branches:
 
 ```powershell
-cd D:\Homework\CICDDemo
+cd <path to this repo>
+git fetch --all
+git branch demo/1-new-headline origin/demo/1-new-headline
+git branch demo/2-discount-bug origin/demo/2-discount-bug
 git add .teamcity/settings.kts
 git commit -m "Point TeamCity settings at our repo and server version"
-git remote add origin <repo url>
+git remote set-url origin <your repo url>   # or: git remote add mine <your repo url>
 git push -u origin main demo/1-new-headline demo/2-discount-bug
 ```
+
+If you pushed to a remote named `mine`, use `mine` instead of `origin` in the last command.
 
 ## 5. Import the pipelines into TeamCity
 
