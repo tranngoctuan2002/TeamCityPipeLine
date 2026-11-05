@@ -148,7 +148,7 @@ Generate each token in **Versioned Settings > Tokens** and paste the `credential
 
 ## Roll back
 
-1. **Deploy to Staging** (or **Production**) > **...** next to **Run**.
+1. **Deploy to Staging** (or **Production**) > **Run custom build** (the **...** on older versions).
 2. **Dependencies** tab > **CI build** > choose the older build, e.g. `1.0.12`.
 3. **Run build**.
 

@@ -88,7 +88,7 @@ Even if a bug slipped past the tests, the smoke test would catch it: `Health.ash
 
 The story: "Marketing wants the old headline back right now."
 
-1. **Deploy to Staging** > the **...** next to **Run** > **Dependencies** tab > **CI build** > pick the build from before Demo 1 > **Run build**.
+1. **Deploy to Staging** > **Run custom build** (the **...** on older versions) > **Dependencies** tab > **CI build** > pick the build from before Demo 1 > **Run build**.
 2. Log: `Deploying version 1.0.<old>`, then the smoke test checks for exactly that version.
 3. Refresh http://localhost:8082: the old headline, the old version.
 4. Roll forward again: use the same dialog and pick the **Demo 1** CI build, the newest green one. Don't use a plain **Run** here: the newest commit is the Demo 2 bug, so TeamCity would start a CI build for it, which fails.
