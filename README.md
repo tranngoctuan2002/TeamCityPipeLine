@@ -18,7 +18,7 @@ The app shows a headline, a discounted price (100.00 − 10% = **90.00**), the e
 | [docs/setup-guide.md](docs/setup-guide.md) | Building it: Visual Studio, IIS, free TeamCity, Git, import, secrets, first run, checklist, troubleshooting |
 | [docs/demo-guide.md](docs/demo-guide.md) | Presenting it: run sheet for the three live demos, the terms to know, likely questions |
 | [docs/pipeline.md](docs/pipeline.md) | Understanding it: what every step does and how, parameters, rollback, next improvements |
-| [docs/build-from-scratch.md](docs/build-from-scratch.md) | Demo 2 (Vietnamese): building the whole pipeline by hand in the TeamCity UI, screen by screen, then comparing it with `settings.kts` |
+| [docs/build-from-scratch.md](docs/build-from-scratch.md) | Demo 2 (Vietnamese): building the whole pipeline by hand in the TeamCity UI, screen by screen, connecting SonarQube, then comparing it with `settings.kts` |
 
 ## Repository layout
 
@@ -32,6 +32,8 @@ scripts/current/           steps only the current pipeline uses (copy config, co
 scripts/tests/             self-check for the quality gate
 config/current/Web.config  the config file the current pipeline copies (anti-pattern on purpose, fake key)
 .teamcity/settings.kts     both pipelines as Kotlin DSL
+sonarqube/                 Docker Compose file to host SonarQube locally (demo 2)
+dotnet-tools.json          pins the SonarScanner version
 docs/                      setup, demo and pipeline guides
 ```
 

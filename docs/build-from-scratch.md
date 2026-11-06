@@ -2,9 +2,9 @@
 
 Buổi 1 cho thấy pipeline **làm được gì**: project được import sẵn từ `settings.kts`. Buổi 2 cho thấy pipeline **được dựng ra sao**: bắt đầu từ một project rỗng, bấm từng màn hình, chạy sau mỗi chặng, và kết thúc bằng việc xem lại tất cả dưới dạng code.
 
-- **Thời lượng:** khoảng 55 phút. Nếu chỉ có 30 phút, dựng sẵn chặng 1-3 trước giờ demo rồi bắt đầu từ chặng 4.
+- **Thời lượng:** khoảng 65 phút. Nếu chỉ có 30 phút, dựng sẵn chặng 1-3 trước giờ demo rồi bắt đầu từ chặng 4.
 - **Cách dựng:** bằng giao diện, vì khán giả nhìn thấy từng khái niệm. Toàn bộ script trong `scripts/` dùng lại nguyên vẹn, không viết thêm code.
-- **Sản phẩm cuối:** 3 build configuration giống project đã import: CI build, Deploy to Staging, Deploy to Production.
+- **Sản phẩm cuối:** 3 build configuration giống project đã import (CI build, Deploy to Staging, Deploy to Production), và CI build có thêm phân tích code bằng SonarQube.
 
 > Nhãn giao diện lấy từ tài liệu TeamCity 2026.2, chưa kiểm tra trên server thật. Những chỗ ghi *(kiểm tra khi tập)* là nhãn tài liệu không nêu rõ. Hãy tập đủ một lần và sửa lại file này theo đúng màn hình của bạn.
 
@@ -15,11 +15,14 @@ Máy đã có đủ theo [setup-guide.md](setup-guide.md): Visual Studio, IIS v�
 Hôm trước:
 - [ ] Tập đủ một lần, rồi **xoá project vừa tập** để buổi thật bắt đầu từ trống. Lần tập này cũng làm nóng NuGet cache.
 - [ ] Sửa các nhãn *(kiểm tra khi tập)* trong file này.
+- [ ] Mở Docker Desktop và tải sẵn image, khoảng 1 GB: `docker compose -f sonarqube/docker-compose.yml pull`.
+- [ ] Sau khi tập, xoá dữ liệu SonarQube để buổi thật bắt đầu từ trống: `docker compose -f sonarqube/docker-compose.yml down -v`.
 
 30 phút trước giờ demo:
+- [ ] Mở Docker Desktop, đóng bớt ứng dụng nặng (TeamCity và SonarQube cùng chạy khá tốn RAM), rồi bật SonarQube: `docker compose -f sonarqube/docker-compose.yml up -d`. Nó cần vài phút, nên bật sớm để tới chặng 6 là sẵn sàng.
 - [ ] **Tạm dừng trigger của project đã import**, nếu không mỗi lần push cả hai pipeline sẽ cùng deploy vào một site. Mở project > bật edit mode (công tắc góc trên bên phải) > **Actions** > **Pause / Activate...**. Làm cho từng subproject nếu cần, rồi kiểm tra cả 4 build đều hiện trạng thái paused.
 - [ ] `git tag -f demo2-start; git push -f origin demo2-start` để có điểm quay lại.
-- [ ] Mở sẵn các tab: TeamCity, http://localhost:8082, http://localhost:8083, thư mục repo, `.teamcity/settings.kts`.
+- [ ] Mở sẵn các tab: TeamCity, http://localhost:9000, http://localhost:8082, http://localhost:8083, thư mục repo, `.teamcity/settings.kts`.
 
 Phương án dự phòng: project đã import chính là bản hoàn chỉnh. Nếu kẹt ở chặng nào, mở build tương ứng trong đó để giải thích, hoặc **Activate** trigger lại và chạy tiếp từ đó.
 
@@ -49,7 +52,7 @@ Server: lưu cấu hình, xếp hàng build.   Agent: máy thật sự chạy bu
 3. Trang **Set up your build**: chọn **From any Git URL**.
 4. URL: `https://github.com/tranngoctuan2002/TeamCityPipeLine.git`. Xác thực HTTPS: anonymous nếu repo public, token nếu repo private.
 5. Name: `CI build`. Default branch: `refs/heads/main`.
-6. **Tắt** lựa chọn tự chạy khi có thay đổi mới, vì chặng 6 sẽ thêm trigger bằng tay.
+6. **Tắt** lựa chọn tự chạy khi có thay đổi mới, vì chặng 7 sẽ thêm trigger bằng tay.
 7. **Create**.
 
 **Bẫy:** repo có sẵn thư mục `.teamcity`, nên TeamCity có thể đề nghị import. Buổi này **đừng import**, nếu không project sẽ thành bản sao của buổi 1. Nếu TeamCity tự gợi ý build step, cũng bỏ qua. *(kiểm tra khi tập)*
@@ -131,27 +134,88 @@ Riêng step này chưa đủ: TeamCity chỉ thấy script thoát với mã 0 ha
 
 **Giải thích:** artifact là thứ duy nhất đi tiếp sang các bước deploy. Từ đây trở đi không biên dịch lại nữa.
 
-## Chặng 6. Tự chạy khi có push (2 phút)
+## Chặng 6. SonarQube: dựng server và nối vào CI (10 phút)
+
+> **Chưa chạy thử.** Các script và file Docker đã có trong repo, nhưng chuỗi begin, build, end chưa chạy với server thật. Hãy tập kỹ chặng này. Tên các bước tạo project dựa trên tài liệu SonarQube, nên có thể khác nhẹ.
+
+Unit test kiểm tra code **chạy đúng không**. SonarQube kiểm tra code **viết tốt không**: bug tiềm ẩn, lỗ hổng bảo mật, code khó bảo trì.
+
+**6.1 Bật server.** Cho khán giả xem `sonarqube/docker-compose.yml`, rồi kiểm tra container đã chạy:
+
+```powershell
+docker compose -f sonarqube/docker-compose.yml ps
+```
+
+Mở http://localhost:9000, đăng nhập `admin` / `admin` và đổi mật khẩu theo yêu cầu.
+
+**6.2 Tạo project.** **Projects** > **Create Project** > **Local Project**:
+- Display name: `DemoApp`
+- Project key: `demoapp`
+- Main branch: `main`, vì mặc định có thể là `master`
+- New code: giữ **Previous version**, nếu được hỏi. *(kiểm tra khi tập)*
+
+**6.3 Tạo token.** **User** > **My Account** > **Security**. Chọn type **Project analysis**, project `DemoApp`, rồi **Generate**. **Copy ngay**, vì token chỉ hiện một lần.
+
+**6.4 Parameters của CI build:**
+
+| Tên | Kind | Value type | Giá trị |
+| --- | --- | --- | --- |
+| `sonar.url` | Configuration parameter | Text | `http://localhost:9000` |
+| `sonar.key` | Configuration parameter | Text | `demoapp` |
+| `env.SONAR_TOKEN` | Environment variable | **Password** | token vừa tạo |
+
+**6.5 Thêm 2 step:**
+
+| Step name | Script file | Script arguments |
+| --- | --- | --- |
+| SonarQube begin | `scripts/sonar-begin.ps1` | `-HostUrl %sonar.url% -ProjectKey %sonar.key% -Version %build.number%` |
+| SonarQube end | `scripts/sonar-end.ps1` | *(trống)* |
+
+**Bẫy, thứ tự là bắt buộc:** step mới nằm cuối danh sách, nên phải sắp xếp lại. Thứ tự đúng:
+
+1. Check tools
+2. Restore NuGet
+3. **SonarQube begin**
+4. Build + version
+5. Unit tests
+6. **SonarQube end**
+7. Quality gate
+
+**Run**. Trong log step **SonarQube end**, TeamCity chờ kết quả Quality Gate. Mở http://localhost:9000, project `DemoApp` hiện dashboard và trạng thái Quality Gate.
+
+**Giải thích:**
+- **Vì sao có begin và end:** scanner phân tích code C# **trong lúc** MSBuild biên dịch. `begin` gài vào MSBuild, build diễn ra như thường, `end` gom kết quả gửi lên server.
+- **Quality Gate:** bộ tiêu chí pass/fail của SonarQube. Script bật `sonar.qualitygate.wait=true`, nên gate fail thì step fail, không có artifact, Staging không chạy. Nếu không bật, gate fail mà build vẫn xanh.
+- **Sonar way chấm code mới:** không có issue mới, mọi Security Hotspot mới đã được review, coverage từ 80%, trùng lặp tối đa 3%. Hai điều kiện sau được bỏ qua khi có dưới 20 dòng mới.
+- **`-Version`:** số build thay đổi mỗi lần, nên SonarQube phân biệt được code mới với code cũ.
+- **Scanner:** được ghim phiên bản trong `dotnet-tools.json`, và `sonar-begin.ps1` tự cài bằng `dotnet tool restore`, nên agent không phải cài thêm.
+
+**Bẫy khác:**
+- Từ lúc này, SonarQube tắt thì CI đỏ ở bước begin. Đây là cái giá của việc thêm một cổng kiểm tra.
+- Pipeline **chưa gửi coverage**. Commit từ 20 dòng mới trở lên có thể làm gate fail vì điều kiện 80%. Các commit demo chỉ sửa một dòng nên không bị ảnh hưởng.
+- Nếu `end` báo không thu được thông tin project, kiểm tra `begin` và build có chạy cùng thư mục và cùng tài khoản không.
+
+## Chặng 7. Tự chạy khi có push (2 phút)
 
 **Triggers** > thêm **VCS Trigger** > **Branch filter:** `+:<default>`.
 
 **Giải thích:**
 - `<default>` là nhánh mặc định của VCS root, tức `main`. Push lên nhánh khác sẽ không chạy.
-- Sau khi push, build chưa chạy ngay. TeamCity cần lần hỏi GitHub kế tiếp, cộng thêm quiet period mặc định 60 giây để gom các commit liền nhau. Thường chờ 1-2 phút. Chặng 9 sẽ thử thật.
+- Sau khi push, build chưa chạy ngay. TeamCity cần lần hỏi GitHub kế tiếp, cộng thêm quiet period mặc định 60 giây để gom các commit liền nhau. Thường chờ 1-2 phút. Chặng 10 sẽ thử thật.
 
-CI build đã xong. Tóm tắt cho khán giả bằng cách mở lại trang **Build Steps**: 5 step, mỗi step chỉ gọi một script.
+CI build đã xong. Tóm tắt cho khán giả bằng cách mở lại trang **Build Steps**: 7 step, mỗi step chỉ gọi một script.
 
-## Chặng 7. Deploy to Staging (10 phút)
+## Chặng 8. Deploy to Staging (10 phút)
 
 Đây là chặng chính, nơi các build được nối thành chuỗi.
 
-**7.1 Tạo build configuration.** Trong project, chọn **Create build configuration** > **Manually**. Name: `Deploy to Staging`.
+**8.1 Tạo build configuration.** Trong project, chọn **Create build configuration** > **Manually**. Name: `Deploy to Staging`.
 
-**7.2 Gắn repo.** **Version Control Settings** > gắn VCS root đã có. Build này không biên dịch, nó chỉ cần code để lấy các script deploy.
+**8.2 Gắn repo.** **Version Control Settings** > gắn VCS root đã có. Build này không biên dịch, nó chỉ cần code để lấy các script deploy.
 
-**7.3 Đổi loại.** Trong **General Settings**, đổi type thành **Deployment**. Từ giờ nút chạy tên là **Deploy**, và mỗi lúc chỉ có 1 build chạy, nên hai lần deploy không ghi đè lên nhau.
+**8.3 Đổi loại.** Trong **General Settings**, đổi type thành **Deployment**. Từ giờ nút chạy tên là **Deploy**, và mỗi lúc chỉ có 1 build chạy, nên hai lần deploy không ghi đè lên nhau.
 
-**7.4 Parameters.** Tab **Parameters** > **Add new parameter**:
+**8.4 Parameters.** Tab **Parameters** > **Add new parameter**:
 
 | Tên | Kind | Value type | Giá trị |
 | --- | --- | --- | --- |
@@ -166,7 +230,7 @@ CI build đã xong. Tóm tắt cho khán giả bằng cách mở lại trang **B
 - TeamCity che log bằng cách tìm và thay chuỗi, nên đừng dùng giá trị ngắn như `123`, kẻo những chỗ khác trong log cũng bị che.
 - Ở đây gõ thẳng giá trị vì cấu hình không nằm trong Git. Token `credentialsJSON:` của buổi 1 chỉ cần khi cấu hình nằm trong Git.
 
-**7.5 Build steps:**
+**8.5 Build steps:**
 
 | Step name | Script file | Script arguments |
 | --- | --- | --- |
@@ -174,7 +238,7 @@ CI build đã xong. Tóm tắt cho khán giả bằng cách mở lại trang **B
 | Smoke test | `scripts/smoke-test.ps1` | `-Url %deploy.url%` |
 | Set build status | `scripts/set-status.ps1` | `-Environment %deploy.env%` |
 
-**7.6 Dependencies.** Đây là phần quan trọng nhất, nên giải thích chậm.
+**8.6 Dependencies.** Đây là phần quan trọng nhất, nên giải thích chậm.
 
 *Snapshot dependency* > **Depend on:** `CI build`:
 
@@ -198,20 +262,20 @@ CI build đã xong. Tóm tắt cho khán giả bằng cách mở lại trang **B
 
 **Bẫy:** nếu không bật **Clean destination paths**, zip cũ còn lại trong `artifact/` và `deploy.ps1` sẽ dừng với lỗi "Expected exactly one". Nhờ vậy nó không deploy nhầm phiên bản, ví dụ sau khi rollback.
 
-**7.7 Trigger.** **Triggers** > thêm **Finish Build Trigger**:
+**8.7 Trigger.** **Triggers** > thêm **Finish Build Trigger**:
 - **Build configuration:** `CI build`
 - **Trigger after successful build only:** bật
 - **Branch filter:** `+:<default>`
 
-**7.8 Chạy.** Bấm **Deploy**. Trong log, chỉ các dòng:
+**8.8 Chạy.** Bấm **Deploy**. Trong log, chỉ các dòng:
 - `Deploying version 1.0.N to Staging`
 - `Smoke test passed: OK 1.0.N`
 
 Rồi mở http://localhost:8082, footer hiện `Staging` và `Version 1.0.N`. Mở `C:\inetpub\cicd-demo-staging\Web.config`: key được ghi lúc deploy, còn `src/DemoApp.Web/Web.config` trong Git vẫn trống.
 
-## Chặng 8. Deploy to Production (4 phút)
+## Chặng 9. Deploy to Production (4 phút)
 
-Không dựng lại, chỉ copy. Đây là lý do chặng 7 đưa mọi thứ khác nhau vào parameter.
+Không dựng lại, chỉ copy. Đây là lý do chặng 8 đưa mọi thứ khác nhau vào parameter.
 
 1. Mở **Deploy to Staging** > cài đặt > **Actions** > copy build configuration *(kiểm tra khi tập)*. Name: `Deploy to Production`.
 2. **Parameters:** `deploy.env` = `Production`, `deploy.path` = `C:\inetpub\cicd-demo-production`, `deploy.url` = `http://localhost:8083`.
@@ -223,7 +287,7 @@ Mở tab **Build Chains** của project để xem chuỗi CI > Staging và CI > 
 
 **Giải thích:** với nhiều môi trường hơn, nên dùng **build template** thay vì copy. Trong `settings.kts` phần này là class `DeployBuild`.
 
-## Chặng 9. Chạy thử toàn chuỗi (6 phút)
+## Chặng 10. Chạy thử toàn chuỗi (6 phút)
 
 **Thay đổi tốt:**
 
@@ -232,7 +296,7 @@ git merge origin/demo/1-new-headline -m "New headline"
 git push
 ```
 
-Chờ 1-2 phút. CI build tự chạy, Deploy to Staging tự chạy sau đó, mở http://localhost:8082 thấy tiêu đề mới. Production vẫn đứng yên cho tới khi bạn bấm **Deploy**.
+Chờ 1-2 phút. CI build tự chạy, Deploy to Staging tự chạy sau đó, mở http://localhost:8082 thấy tiêu đề mới. Production vẫn đứng yên cho tới khi bạn bấm **Deploy**. Trên http://localhost:9000, project `DemoApp` có thêm một lần phân tích với version mới.
 
 **Thay đổi có lỗi:**
 
@@ -241,7 +305,7 @@ git merge origin/demo/2-discount-bug -m "Apply discount change"
 git push
 ```
 
-CI đỏ ở **Unit tests**, tab Tests có 3 test fail, không có artifact, Staging không chạy, http://localhost:8082 vẫn là **90.00**.
+CI đỏ ở **Unit tests**, tab Tests có 3 test fail, không có artifact, Staging không chạy, http://localhost:8082 vẫn là **90.00**. Step **SonarQube end** cũng bị bỏ qua, nên SonarQube không có lần phân tích nào cho commit này.
 
 **Rollback:** mở **Deploy to Staging** > **Run custom build** > tab **Dependencies** > chọn CI build cũ > chạy. Trong log, smoke test kiểm đúng phiên bản cũ.
 
@@ -250,10 +314,10 @@ CI đỏ ở **Unit tests**, tab Tests có 3 test fail, không có artifact, Sta
 - Hộp thoại chỉ hiện tối đa 20 build.
 - Build của loại Deployment cũng có nút **Redeploy** trong mục Deployments. Xem thử khi tập, nếu tiện hơn thì dùng nó.
 
-## Chặng 10. Từ giao diện sang code (5 phút)
+## Chặng 11. Từ giao diện sang code (5 phút)
 
 1. Mở cài đặt của **CI build** > bấm **View as code** ở thanh bên. TeamCity hiện Kotlin của đúng cấu hình vừa bấm.
-2. Mở `.teamcity/settings.kts` bên cạnh và đối chiếu:
+2. Mở `.teamcity/settings.kts` bên cạnh và đối chiếu. Hai step SonarQube chỉ có ở project vừa dựng, chưa có trong `settings.kts`, để project đã import vẫn chạy khi SonarQube tắt:
 
 | Màn hình vừa bấm | Dòng trong `settings.kts` |
 | --- | --- |
@@ -308,7 +372,19 @@ Trigger chỉ quyết định **khi nào** chạy. Snapshot dependency mới đ�
 Để lấy `scripts/`, và snapshot dependency giữ script đó cùng commit với artifact.
 
 **Bản miễn phí đủ không?**
-Bản Professional có 3 agent và tối đa 100 build configuration. Buổi này dùng 3.
+Bản Professional có 3 agent và tối đa 100 build configuration. Buổi này dùng 3. SonarQube Community Build cũng miễn phí.
+
+**Đã có `quality-gate.ps1`, sao cần thêm SonarQube?**
+Hai thứ kiểm tra hai việc khác nhau. `quality-gate.ps1` tìm secret trong file config. SonarQube phân tích code C#. Chạy cả hai vì một cái rất nhanh và không cần server, một cái sâu hơn.
+
+**Vì sao SonarQube chạy trong CI build, không phải deploy?**
+Nó cần theo dõi lúc biên dịch, và chỉ cần chạy một lần cho mỗi commit. Build deploy không biên dịch.
+
+**SonarQube có phân tích pull request được không?**
+Community Build chỉ phân tích nhánh chính, nên khớp với CI đang chạy trên `main`. Phân tích theo nhánh và pull request cần bản trả phí.
+
+**Vì sao chạy bằng Docker?**
+Một lệnh là có server đúng phiên bản, không phải cài Java. Dữ liệu nằm trong Docker volume, xoá sạch được bằng `down -v`. Cấu hình trong repo dùng database nhúng, chỉ phù hợp cho demo.
 
 ## Sau buổi demo
 
@@ -321,3 +397,4 @@ git push --force-with-lease origin main
 ```
 
 3. Xoá project `Pipeline from scratch` nếu định tập lại.
+4. Tắt SonarQube để giải phóng RAM: `docker compose -f sonarqube/docker-compose.yml stop`. Dùng `down -v` nếu muốn xoá cả dữ liệu.

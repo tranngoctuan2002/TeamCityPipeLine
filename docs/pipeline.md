@@ -112,6 +112,17 @@ Both come from the same template (`DeployBuild` in `settings.kts`), so they are 
 
 ---
 
+## SonarQube (demo 2 only, not yet run against a server)
+
+Code analysis, added by hand to the CI build in [build-from-scratch.md](build-from-scratch.md#chặng-6-sonarqube-dựng-server-và-nối-vào-ci-10-phút). It is **not** in `settings.kts`, so the imported project keeps working when SonarQube is off.
+
+- **Server:** `sonarqube/docker-compose.yml` runs SonarQube Community Build on http://localhost:9000, reachable only from this PC. It uses the embedded database, so it is for demos only.
+- **`sonar-begin.ps1`, before the build:** restores the scanner pinned in `dotnet-tools.json`, then runs `dotnet sonarscanner begin`, which hooks into MSBuild. It needs `env.SONAR_TOKEN` and turns on `sonar.qualitygate.wait`.
+- **`sonar-end.ps1`, after the tests:** runs `dotnet sonarscanner end`, which uploads the analysis and waits for the Quality Gate. A failed gate fails the step, so no artifact is published.
+- **Known gap:** no coverage report is sent. The default gate needs 80% coverage on new code once a change has 20 or more new lines to cover.
+
+---
+
 ## Current pipeline (`CurrentBuildAndCopy`), for comparison
 
 | # | Step | Script | Problem it shows |
