@@ -7,4 +7,5 @@ if (-not $env:SONAR_TOKEN) {
 }
 
 Set-Location $RepoRoot
-Invoke-Checked 'dotnet' @('sonarscanner', 'end')
+# "end" needs the token too: it uploads the analysis and asks for the Quality Gate.
+Invoke-Checked 'dotnet' @('sonarscanner', 'end', "/d:sonar.token=$env:SONAR_TOKEN")

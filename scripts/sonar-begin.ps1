@@ -2,7 +2,8 @@
 #   -HostUrl     the SonarQube server, as seen from the agent
 #   -ProjectKey  the project key in SonarQube
 #   -Version     the build number; a new value per build is what lets SonarQube tell new code from old
-# The token comes from the TeamCity password parameter env.SONAR_TOKEN, so it stays off the command line.
+# The token comes from the TeamCity password parameter env.SONAR_TOKEN and is passed to the scanner
+# explicitly (/d:sonar.token). TeamCity masks the value in the build log.
 param(
     [Parameter(Mandatory = $true)][string]$HostUrl,
     [Parameter(Mandatory = $true)][string]$ProjectKey,
@@ -22,5 +23,6 @@ Invoke-Checked 'dotnet' @(
     "/k:$ProjectKey",
     "/v:$Version",
     "/d:sonar.host.url=$HostUrl",
-    '/d:sonar.qualitygate.wait=true'
+    '/d:sonar.qualitygate.wait=true',
+    "/d:sonar.token=$env:SONAR_TOKEN"
 )
