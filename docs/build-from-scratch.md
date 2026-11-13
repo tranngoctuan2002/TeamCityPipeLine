@@ -151,7 +151,7 @@ Mở http://localhost:9000, đăng nhập `admin` / `admin` và đổi mật kh�
 
 **6.2 Tạo project.** **Projects** > **Create Project** > **Local Project**:
 - Display name: `DemoApp`
-- Project key: `demoapp`
+- Project key: `Demo`
 - Main branch: `main`, vì mặc định có thể là `master`
 - New code: giữ **Previous version**, nếu được hỏi. *(kiểm tra khi tập)*
 
@@ -162,7 +162,7 @@ Mở http://localhost:9000, đăng nhập `admin` / `admin` và đổi mật kh�
 | Tên | Kind | Value type | Giá trị |
 | --- | --- | --- | --- |
 | `sonar.url` | Configuration parameter | Text | `http://localhost:9000` |
-| `sonar.key` | Configuration parameter | Text | `demoapp` |
+| `sonar.key` | Configuration parameter | Text | `Demo` |
 | `env.SONAR_TOKEN` | Environment variable | **Password** | token vừa tạo |
 
 **6.5 Thêm 2 step:**

@@ -165,10 +165,10 @@ git push
                                 pass = continue, fail = CI build red, no artifact
 ```
 
-**5a. The service (1 min).** Show `sonarqube/docker-compose.yml` and http://localhost:9000: a separate server, in Docker, with its own login. Open project `DemoApp`.
+**5a. The service (1 min).** Show `sonarqube/docker-compose.yml` and http://localhost:9000: a separate server, in Docker, with its own login. Open project `Demo`.
 
 **5b. The connection (2 min).** On Demo1 **CI build** > **Parameters**:
-- `sonar.url` = `http://localhost:9000`, `sonar.key` = `demoapp`.
+- `sonar.url` = `http://localhost:9000`, `sonar.key` = `Demo`.
 - `env.SONAR_TOKEN` is a **password parameter**, the key to the third party. In Git it is only a `credentialsJSON:...` reference; the value is masked in the log. Show where it was created (SonarQube **My Account > Security**).
 - `sonar.enabled` = `false`: both SonarQube steps are skipped when it is off.
 

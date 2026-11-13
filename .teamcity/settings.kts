@@ -141,7 +141,7 @@ object ImprovedCi : BuildType({
     params {
         param("sonar.enabled", "false")
         param("sonar.url", "http://localhost:9000")
-        param("sonar.key", "demoapp")
+        param("sonar.key", "Demo")
         // Generate in Versioned Settings > Tokens from the SonarQube token, paste "credentialsJSON:<token>".
         password("env.SONAR_TOKEN", "credentialsJSON:c2ad7d96-d759-46c3-b75b-2657a09f7094")
     }

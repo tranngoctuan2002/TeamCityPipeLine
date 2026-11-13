@@ -123,7 +123,7 @@ Both come from the same template (`DeployBuild` in `settings.kts`), so they are 
 
 **Not yet run against a server.** The CI build has two optional steps, **3. SonarQube begin** and **6. SonarQube end**, in `settings.kts`. Both carry the condition `sonar.enabled = true`, which is `false` by default, so the imported project works with SonarQube off. To use it, run **Run custom build** > **Parameters** and set `sonar.enabled` to `true`, or change the default in `settings.kts`. The same two steps are added by hand in [build-from-scratch.md](build-from-scratch.md#chặng-6-sonarqube-dựng-server-và-nối-vào-ci-10-phút).
 
-Parameters on the CI build: `sonar.url` (`http://localhost:9000`), `sonar.key` (`demoapp`), and the password parameter `env.SONAR_TOKEN`. The token comes from SonarQube (**My Account > Security**); store it as a TeamCity token (**Versioned Settings > Tokens**) and paste `credentialsJSON:...` into `settings.kts`.
+Parameters on the CI build: `sonar.url` (`http://localhost:9000`), `sonar.key` (`Demo`), and the password parameter `env.SONAR_TOKEN`. The token comes from SonarQube (**My Account > Security**); store it as a TeamCity token (**Versioned Settings > Tokens**) and paste `credentialsJSON:...` into `settings.kts`.
 
 How the pieces connect: TeamCity checks the code out of GitHub on the agent, the scanner on the agent analyses it while MSBuild compiles, then uploads the result to the SonarQube server with the token.
 
