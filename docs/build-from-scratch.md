@@ -2,7 +2,8 @@
 
 Buổi 1 cho thấy pipeline **làm được gì**: project được import sẵn từ `settings.kts`. Buổi 2 cho thấy pipeline **được dựng ra sao**: bắt đầu từ một project rỗng, bấm từng màn hình, chạy sau mỗi chặng, và kết thúc bằng việc xem lại tất cả dưới dạng code.
 
-- **Thời lượng:** khoảng 65 phút. Nếu chỉ có 30 phút, dựng sẵn chặng 1-3 trước giờ demo rồi bắt đầu từ chặng 4.
+- **Vai trò hiện tại:** tài liệu **tham khảo** cho Demo2 trong [demo-guide.md](demo-guide.md). Dựng sẵn Demo2 tới chặng 8 (bỏ chặng 6 SonarQube, phần đó làm ở Demo1) trước giờ demo. Trên sân khấu chỉ làm live chặng 1-2 (project, Git, một step đầu, Run), rồi dạo qua các chặng còn lại. View as code (chặng 11) làm ở Demo1.
+- **Thời lượng nếu dựng đủ:** khoảng 65 phút. Nếu chỉ có 30 phút, dựng sẵn chặng 1-3 trước giờ demo rồi bắt đầu từ chặng 4.
 - **Cách dựng:** bằng giao diện, vì khán giả nhìn thấy từng khái niệm. Toàn bộ script trong `scripts/` dùng lại nguyên vẹn, không viết thêm code.
 - **Sản phẩm cuối:** 3 build configuration giống project đã import (CI build, Deploy to Staging, Deploy to Production), và CI build có thêm phân tích code bằng SonarQube.
 
@@ -317,7 +318,7 @@ CI đỏ ở **Unit tests**, tab Tests có 3 test fail, không có artifact, Sta
 ## Chặng 11. Từ giao diện sang code (5 phút)
 
 1. Mở cài đặt của **CI build** > bấm **View as code** ở thanh bên. TeamCity hiện Kotlin của đúng cấu hình vừa bấm.
-2. Mở `.teamcity/settings.kts` bên cạnh và đối chiếu. Hai step SonarQube chỉ có ở project vừa dựng, chưa có trong `settings.kts`, để project đã import vẫn chạy khi SonarQube tắt:
+2. Mở `.teamcity/settings.kts` bên cạnh và đối chiếu. Hai step SonarQube cũng có trong `settings.kts` (step 3 và 6), nhưng có điều kiện `sonar.enabled = true` và mặc định tắt, để project đã import vẫn chạy khi SonarQube tắt:
 
 | Màn hình vừa bấm | Dòng trong `settings.kts` |
 | --- | --- |

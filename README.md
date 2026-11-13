@@ -16,9 +16,9 @@ The app shows a headline, a discounted price (100.00 − 10% = **90.00**), the e
 | Read | When |
 | --- | --- |
 | [docs/setup-guide.md](docs/setup-guide.md) | Building it: Visual Studio, IIS, free TeamCity, Git, import, secrets, first run, checklist, troubleshooting |
-| [docs/demo-guide.md](docs/demo-guide.md) | Presenting it: run sheet for the three live demos, the terms to know, likely questions |
+| [docs/demo-guide.md](docs/demo-guide.md) | Presenting it: run sheet for the talk (Demo2 shows how, built by hand; Demo1 proves it, imported: CI and CD chains, SonarQube), the terms to know, likely questions |
 | [docs/pipeline.md](docs/pipeline.md) | Understanding it: what every step does and how, parameters, rollback, next improvements |
-| [docs/build-from-scratch.md](docs/build-from-scratch.md) | Demo 2 (Vietnamese): building the whole pipeline by hand in the TeamCity UI, screen by screen, connecting SonarQube, then comparing it with `settings.kts` |
+| [docs/build-from-scratch.md](docs/build-from-scratch.md) | Demo2 reference (Vietnamese): building the whole pipeline by hand in the TeamCity UI, screen by screen, connecting SonarQube, then comparing it with `settings.kts` |
 
 ## Repository layout
 
@@ -42,13 +42,13 @@ docs/                      setup, demo and pipeline guides
 | Branch | Change | Used in |
 | --- | --- | --- |
 | `main` | Starting point | Setup |
-| `demo/1-new-headline` | Headline becomes "Shipped by the pipeline!" | Demo 1 |
-| `demo/2-discount-bug` | Bug: discount divides by 10 instead of 100, so the price shows **0.00**; 3 unit tests fail | Demo 2 |
+| `demo/1-new-headline` | Headline becomes "Shipped by the pipeline!" | Chain demo (4a) |
+| `demo/2-discount-bug` | Bug: discount divides by 10 instead of 100, so the price shows **0.00**; 3 unit tests fail | Chain demo (4c) |
 
 During the demo you only merge and push, never type code (details in the [demo guide](docs/demo-guide.md)):
 
 ```
-git merge origin/demo/1-new-headline -m "New headline" && git push   # Demo 1
-git merge origin/demo/2-discount-bug -m "Apply discount change" && git push   # Demo 2
+git merge origin/demo/1-new-headline -m "New headline" && git push   # 4a
+git merge origin/demo/2-discount-bug -m "Apply discount change" && git push   # 4c
 git revert --no-edit -m 1 HEAD && git push                     # after the demo: undo the bug
 ```

@@ -1,118 +1,198 @@
 # Demo guide
 
-A 20-25 minute talk: today's pipeline next to the improved one, with three live demos. You only merge and push during the demo; you never type code.
+A talk of about 38 minutes on getting a project onto TeamCity: two ways to set it up, parameters and artifacts, a CI chain and a CD chain, and a third-party service (SonarQube). You only merge and push during the demo; you never type code.
+
+The talk uses **two TeamCity projects**:
+
+| Project | Built how | Used for |
+| --- | --- | --- |
+| **Demo2** | By hand in the UI, **pre-built** before the talk | *Showing how*: the screens, one live first step. Nothing deploys from it |
+| **Demo1** | Imported from `.teamcity/settings.kts` | *Proving it works*: the CI and CD chains, parameters, artifact, deploy, SonarQube |
 
 Part 1 is the run sheet. Part 2 is what you need to know to present it and answer questions. How each step works is in [pipeline.md](pipeline.md).
+
+| # | Section | Project | Time |
+| --- | --- | --- | --- |
+| 1 | Create a project, first step, **Run** | Demo2 | 5 min |
+| 2 | Tour: parameters, version, artifact, deployment, dependencies, triggers | Demo2 | 7 min |
+| 3 | Import settings, View as code | Demo1 | 4 min |
+| 4 | Proof: parameters, artifact, deploy, CI and CD chains | Demo1 | 12 min |
+| 5 | A third-party service: SonarQube | Demo1 | 8 min |
+| | Wrap-up | | 2 min |
+| | **Total** | | **38 min** |
+
+**Cuts for a 30-minute slot (about 30 min):**
+
+| Cut | Saves | How |
+| --- | --- | --- |
+| Section 2 (tour) | 4 min | Show only parameters and dependencies; mention the rest while Demo1 runs |
+| 4d (rollback) | 2 min | One sentence, or keep it for Q&A |
+| 5 (SonarQube parameters) | 2 min | Show only `env.SONAR_TOKEN` and `sonar.enabled` |
+
+Never cut: the live Run in section 1, the import in section 3, the chain run in 4c, the SonarQube run in section 5.
 
 ---
 
 ## Part 1: run sheet
 
+### Which project is active
+
+Only **one** project may be active when something deploys, because both would write to the same IIS sites (8082, 8083).
+
+- **Demo2 never deploys.** Its **Deploy** build configurations exist to be shown, so **pause every build configuration in Demo2** except the one you Run live in section 1.
+- **Demo1 is active** for sections 3-5.
+- **Demo2 must not have Versioned Settings enabled.** If it does, it would write into this repo's `.teamcity/` and overwrite `settings.kts`. When creating a project, if TeamCity offers to import settings, decline.
+- Tokens are per project. Demo1's `credentialsJSON:...` tokens only work in Demo1. In Demo2, type secrets in **Password** parameters instead.
+
 ### Before the talk
 
 The day before:
-- [ ] Setup done and one full dry run of this guide ([setup-guide.md](setup-guide.md)).
-- [ ] While the dry run is green, take **screenshots** as a backup: the build chain, the Tests tab with 3 failures, and the three sites.
+- [ ] Demo1: push the latest `settings.kts`, wait for the settings to load, check **Versioned Settings** shows no DSL error, and all 7 CI steps are there.
+- [ ] Demo1: run **CI build** by hand once with `sonar.enabled=false` (2 SonarQube steps skipped, build green), then once with `sonar.enabled=true`. The begin, build, end chain has not been run against a real server yet, so rehearse it.
+- [ ] Demo2: build it up to **Deploy to Staging** (see [build-from-scratch.md](build-from-scratch.md), chặng 1-8). Leave a **fresh** build configuration for the live first step in section 1, or delete the build configuration you rehearsed with just before the talk.
+- [ ] Take **screenshots** as backup while it is green: the build chain, the Tests tab with 3 failures, the SonarQube dashboard, the three sites.
+- [ ] `docker compose -f sonarqube/docker-compose.yml pull` (about 1 GB).
 - [ ] Reset after the dry run (see [After the demo](#after-the-demo)).
 
 30 minutes before:
-- [ ] TeamCity agent **Connected**; all four builds green on the latest `main`.
-- [ ] Run **CI build** once to warm up the NuGet cache, so live builds take about 1-2 minutes.
-- [ ] All three sites show the price **90.00** and the headline "Welcome to the CI/CD demo".
-- [ ] Before the talk, tag the starting point so you can reset later: `git tag -f demo-start; git push -f origin demo-start`.
-- [ ] Open these tabs, zoomed to 125-150%:
-  1. TeamCity: the project overview, both pipelines visible.
-  2. http://localhost:8081 (current), http://localhost:8082 (Staging), http://localhost:8083 (Production).
-  3. A terminal in the repo folder, on `main`, after `git pull`.
-  4. The editor with `.teamcity/settings.kts` and `scripts/` open.
+- [ ] TeamCity agent **Connected**.
+- [ ] Start SonarQube early, it needs a few minutes: `docker compose -f sonarqube/docker-compose.yml up -d`. Check http://localhost:9000.
+- [ ] **Demo2:** every build configuration is **paused**, Versioned Settings off. **Demo1:** all 4 builds **active**, latest `main` green.
+- [ ] Run **CI build** in Demo1 once to warm up the NuGet cache (about 1-2 minutes per build afterwards).
+- [ ] All sites show the price **90.00** and the headline "Welcome to the CI/CD demo".
+- [ ] `git tag -f demo-start; git push -f origin demo-start`.
+- [ ] Open these tabs, zoomed to 125-150%: TeamCity (Demo2 and Demo1 in two tabs), http://localhost:9000, http://localhost:8082, http://localhost:8083, a terminal in the repo on `main` after `git pull`, the editor with `.teamcity/settings.kts` open.
 
-### 0. The problem (2 min)
+### 1. Create a project, first step, Run (5 min) — Demo2
 
-Show the **1. Current pipeline** build and its 7 steps. Name the four problems:
+**Message:** the concepts below exist in every CI tool (Jenkins, GitHub Actions, GitLab CI). Only the screens differ.
 
-1. **No tests:** a bug goes straight to the server.
-2. **No versioned artifact:** you can't tell which code is running, and there's nothing to roll back to. The footer says `local-dev`.
-3. **Config with secrets in Git:** open `config/current/Web.config` and point at `ApiKey`.
-4. **No check after deploy:** a green build can mean a broken site.
+1. **Create project** > **Manually**. Decline any offer to import settings.
+2. **Version Control Settings:** attach the GitHub repo. Explain the **VCS root**: where the code is, which branch. The **agent** checks it out.
+3. **Build Steps** > **PowerShell** > script file `scripts/check-tools.ps1`. Every step only calls a script that lives in Git.
+4. **Run.** Open the log: checkout, then the step. This is the one thing the audience sees run in Demo2.
 
-### 1. Tour of the new pipeline (3 min)
+Detailed screens: [build-from-scratch.md](build-from-scratch.md), chặng 1-2.
 
-- **2. Improved pipeline**: CI build, then Deploy to Staging (automatic), then Deploy to Production (manual). Open the **build chain** view.
-- In the editor, show that the pipeline is **code in Git** (`settings.kts`) and that every step is a **script in Git** (`scripts/`).
-- The key idea: **build once, deploy the same zip everywhere.**
+### 2. Tour of the finished Demo2 (7 min) — Demo2
 
-### 2. Demo 1: a change flows through (5-6 min)
+Open the pre-built **CI build** and **Deploy to Staging**. Click, don't build. Say "I built these the same way as the step you just saw."
+
+| Screen | Say |
+| --- | --- |
+| **Parameters** | Three kinds: *configuration* (`%name%`), *environment variable* (`env.NAME`), *password* (encrypted, masked in logs). The same Deploy build becomes Production by changing three values. |
+| **General Settings** > build number | `1.0.%build.counter%`: every build gets a version. |
+| **Build Steps** | Check tools, restore, build, tests, gate: each one a script. |
+| **General Settings** > artifact paths | `out/publish/** => DemoApp.Web.%build.number%.zip`: one zip per build. |
+| **Deploy to Staging** > type **Deployment** | One run at a time per site. |
+| **Dependencies** | *Snapshot*: tied to one CI build, won't start if it failed. *Artifact*: downloads that CI build's zip, cleaned first. |
+| **Triggers** | *Finish build* trigger on Staging; none on Production, so a click is the approval. |
+
+Close with: "That is the manual way. Now the same thing, already running, as code."
+
+### 3. Import settings, View as code (4 min) — Demo1
+
+1. Show how Demo1 was made: **Create project** > **From a repository URL**; TeamCity finds `.teamcity/settings.kts` and offers **Import settings**. Use screenshots, don't repeat it live: the tokens only work in Demo1.
+2. Open Demo1: the whole pipeline is there at once: **CI build**, **Deploy to Staging**, **Deploy to Production**.
+3. Open **View as code** on a Demo1 build configuration and put it next to `settings.kts`:
+
+| Clicking (Demo2) | Code (`settings.kts`) |
+| --- | --- |
+| Version Control Settings | `vcs { root(DemoRepo) }` |
+| A PowerShell build step | `powerShell { scriptMode = file { path = ... } }` |
+| Parameters tab | `params { param(...) }` |
+| Triggers tab | `triggers { vcs { ... } }` |
+| Dependencies tab | `dependencies { dependency(...) }` |
+
+4. From now on, settings change by **commit and push**, with review and history.
+
+**Message:** UI is fastest to learn. Code is better with several people or environments.
+
+### 4. Proof: parameters, artifact, deploy, two chains (12 min) — Demo1
+
+Open the project's **Build Chains** tab and show the chain:
+
+```
+ CI chain                                CD chain
+ push ─► CI build ───(green)───► Deploy to Staging ──(manual Run)──► Deploy to Production
+         check, restore, build,    same zip, config for Staging,      same zip that passed Staging
+         test, gate, artifact      smoke test
+```
+
+**4a. Push a change (4 min).**
 
 ```powershell
 git merge origin/demo/1-new-headline -m "New headline"
 git push
 ```
 
-While it runs:
-1. **Both pipelines start** on the same push.
-2. Open the **CI build** while it runs and talk through the steps: check tools, restore, build + version, tests, gate.
-3. When CI is green:
-   - **Tests** tab: 7 passed.
-   - **Artifacts** tab: `DemoApp.Web.1.0.N.zip`, the version in the file name.
-4. **Deploy to Staging** starts by itself. Open its log:
-   - `Deploying version 1.0.N to Staging`
-   - smoke test `Smoke test passed: OK 1.0.N`
-   - status text `Deployed 1.0.N to Staging`
-5. Refresh http://localhost:8082: the new headline "Shipped by the pipeline!", footer `Staging · Version 1.0.N`.
-6. Compare http://localhost:8081: it has the new headline too, but the footer still says `local-dev`.
-7. Production is **manual**: **Deploy to Production** > **Run**. Refresh http://localhost:8083: same version as Staging, so the same zip.
+Wait 1-2 minutes (the VCS trigger polls GitHub and has a quiet period). While **CI build** runs, name the steps.
+- When green: **Tests** tab 7 passed.
 
-**Message:** every change gets a version, is tested, is deployed the same way everywhere, and is checked after the deploy.
+**4b. Artifact and parameters (4 min).**
+- **Artifacts** tab: `DemoApp.Web.1.0.N.zip`, the version in the name. A red build would publish nothing.
+- **Deploy to Staging** starts by itself. Log: `Deploying version 1.0.N to Staging` and `Smoke test passed: OK 1.0.N`.
+- **Parameters proved:** refresh http://localhost:8082: the new headline and footer `Staging · Version 1.0.N`. Open `C:\inetpub\cicd-demo-staging\Web.config`: `Environment=Staging` and the key, written at deploy time. In Git, `src/DemoApp.Web/Web.config` has `ApiKey` **empty**.
+- **Deploy to Production** > **Run**. Refresh http://localhost:8083: same version, same zip, `Environment=Production` from three parameters.
 
-### 3. Demo 2: a bug is stopped (5 min)
-
-The change looks like a harmless refactor of the discount code, but it divides by 10 instead of 100.
+**4c. The chain stops a bug (2 min).**
 
 ```powershell
 git merge origin/demo/2-discount-bug -m "Apply discount change"
 git push
 ```
 
-1. **Current pipeline:** green. Refresh http://localhost:8081: the price is **0.00**. The bug reached the server and nobody was told.
-2. **Improved pipeline:**
-   - The **CI build** is red at **4. Unit tests**. The **Tests** tab shows 3 failed, e.g. `ApplyDiscount_ReturnsDiscountedPrice(100,10,90)`: expected 90, was 0.
-   - **No artifact** was published.
-   - **Deploy to Staging** did not run.
-   - Refresh http://localhost:8082: still **90.00**.
+- **CI build** is red at **5. Unit tests**: 3 failed, e.g. `ApplyDiscount_ReturnsDiscountedPrice(100,10,90)`.
+- No artifact. **Deploy to Staging** did not run. http://localhost:8082 still shows **90.00**.
 
-**Message:** the pipeline is a safety net. A failed test means nothing gets deployed.
+**4d. Roll back in one click (2 min).** "Marketing wants the old headline back."
+- **Deploy to Staging** > **Run custom build** > **Dependencies** tab > **CI build** > an older green build > **Run build**.
+- Log: `Deploying version 1.0.<old>`; the smoke test checks for exactly that version.
+- Roll forward the same way with the newest **green** CI build. A plain **Run** would start a CI build for the bug.
 
-Even if a bug slipped past the tests, the smoke test would catch it: `Health.ashx` runs the price logic and answers HTTP 500 `FAIL`.
+**Message:** CI proves the change is good, CD moves the proven zip. Nothing is rebuilt on the way, so rollback takes seconds.
 
-### 4. Demo 3: roll back in one click (3 min)
+### 5. A third-party service: SonarQube (8 min) — Demo1
 
-The story: "Marketing wants the old headline back right now."
+> Rehearse this section. The begin, build, end chain has not been run against a real server yet.
 
-1. **Deploy to Staging** > **Run custom build** (the **...** on older versions) > **Dependencies** tab > **CI build** > pick the build from before Demo 1 > **Run build**.
-2. Log: `Deploying version 1.0.<old>`, then the smoke test checks for exactly that version.
-3. Refresh http://localhost:8082: the old headline, the old version.
-4. Roll forward again: use the same dialog and pick the **Demo 1** CI build, the newest green one. Don't use a plain **Run** here: the newest commit is the Demo 2 bug, so TeamCity would start a CI build for it, which fails.
+**Message:** TeamCity orchestrates other tools: the agent checks out the code from **GitHub**, analyses it, and sends the result to a separate service, **SonarQube**.
 
-**Message:** nothing was rebuilt. The exact zip that was tested before is deployed again, in seconds.
+```
+ GitHub ──checkout──► TeamCity agent ──scanner uploads results (token)──► SonarQube server :9000
+                          │                                                    │
+                          └──── waits for the Quality Gate ◄───────────────────┘
+                                pass = continue, fail = CI build red, no artifact
+```
 
-### 5. Secrets (2 min)
+**5a. The service (1 min).** Show `sonarqube/docker-compose.yml` and http://localhost:9000: a separate server, in Docker, with its own login. Open project `DemoApp`.
 
-1. `src/DemoApp.Web/Web.config` in Git: `ApiKey` is **empty**.
-2. `settings.kts`: only `credentialsJSON:...` tokens. The real values live encrypted on the TeamCity server.
-3. Open `C:\inetpub\cicd-demo-staging\Web.config` on the server: `Environment=Staging` and the key, written at deploy time.
-4. The deploy build log never shows the value; TeamCity masks it.
-5. The **quality gate** fails the CI build if someone commits a key under `src/`. You can show the self-check: `.\scripts\tests\quality-gate.tests.ps1`.
+**5b. The connection (2 min).** On Demo1 **CI build** > **Parameters**:
+- `sonar.url` = `http://localhost:9000`, `sonar.key` = `demoapp`.
+- `env.SONAR_TOKEN` is a **password parameter**, the key to the third party. In Git it is only a `credentialsJSON:...` reference; the value is masked in the log. Show where it was created (SonarQube **My Account > Security**).
+- `sonar.enabled` = `false`: both SonarQube steps are skipped when it is off.
 
-### 6. Wrap-up (2 min)
+**5c. Switch it on for one run (4 min).** **Run** > **Run custom build** > **Parameters** > `sonar.enabled` = `true` > **Run build**.
+- **3. SonarQube begin** runs **before** the build, because the scanner watches MSBuild compile the C# code. **6. SonarQube end** runs after the tests: it uploads and waits.
+- Log of step 6: the Quality Gate result.
+- Refresh http://localhost:9000: the analysis for version `1.0.N`.
 
-| | Before | After |
-| --- | --- | --- |
-| Tests | none | run on every push; a red test stops everything |
-| What's running? | `local-dev` | `1.0.N` in the zip, the DLL, the page and the health check |
-| Rollback | rebuild from an old commit and hope | re-deploy an older zip in one click |
-| Config and secrets | a file per server in Git | one artifact; values and secrets per environment from TeamCity |
-| After deploy | nothing | smoke test against the exact version |
-| Production | the same build copies to the server | manual, same zip that passed Staging |
+**5d. The gate decides (1 min).** Explain, don't run:
+- `sonar.qualitygate.wait=true`: if SonarQube's gate fails, the step fails, so no artifact and no Staging. Same safety net as a failed test, owned by another system.
+- **Two gates:** `7. Quality gate` is our own script (secrets in config). SonarQube's gate checks code quality.
+- Cost: with `sonar.enabled=true`, a SonarQube that is down turns CI red at step 3.
+
+**Limits, if asked:** SonarQube Community analyses the main branch only: no branch or pull-request analysis, no comments on GitHub PRs (Developer edition or higher). No coverage report is sent, so a change of 20 or more new lines can fail the 80% coverage condition; the demo commits change one line.
+
+### Wrap-up (2 min)
+
+| | |
+| --- | --- |
+| Two ways to set up | UI to learn (Demo2), code to scale and review (Demo1) |
+| Parameters | One pipeline, different values per environment; secrets masked |
+| Artifact | Built once, versioned, deployed everywhere |
+| Two chains | CI proves it, CD moves it; a manual step before Production |
+| Third party | SonarQube joins through a URL, a token, and a gate that can stop the chain |
 
 Next steps: see [Next improvements](pipeline.md#next-improvements).
 
@@ -132,15 +212,19 @@ git reset --hard demo-start
 git push --force-with-lease origin main
 ```
 
-Then run **CI build** once so Staging, and by hand Production, go back to the starting version.
+Then run **CI build** in Demo1 once so Staging, and by hand Production, go back to the starting version. Clear SonarQube with `docker compose -f sonarqube/docker-compose.yml down -v`, then create the project and token again before the next run.
 
 ### If something goes wrong live
 
 | What you see | Do this |
 | --- | --- |
 | A build sits in the queue | **Agents**: is the agent connected? If not, show the backup screenshots and keep talking |
+| Demo2's live Run is red | Show the log, say "a real log", and move on to Demo1; section 2 does not depend on it |
 | CI is red at **Check tools** or **Restore** | The agent setup changed or the network is down. Use the screenshots |
+| CI is red at **3. SonarQube begin** | SonarQube is not up yet (`docker compose ... ps`), or `env.SONAR_TOKEN` is empty or from another project. Set `sonar.enabled` back to `false` and continue |
+| CI is red at **6. SonarQube end** | Read the log: gate failed, or begin and build ran from different folders. Show the dashboard and explain it is the gate doing its job |
 | Staging didn't start after a green CI | Run **Deploy to Staging** by hand; it reuses the green CI build of the newest commit |
+| Two deploys ran at once | Demo2 was not fully paused. Pause it, re-run the Demo1 deploy |
 | Smoke test fails with "Unable to connect" | The IIS site or app pool is stopped: start it in IIS Manager and re-run the deploy |
 | The site says "Deploying a new version" | A copy failed and the site was left offline on purpose. Re-run the deploy, then explain this is the safe behavior |
 

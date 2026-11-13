@@ -39,7 +39,10 @@ Steps run in order, and each runs only if every earlier step passed.
 - **How:** `MSBuild DemoApp.sln /t:Restore` fills the agent's NuGet cache.
 - **Note for real apps:** projects that use `packages.config` (common in older .NET Framework apps) also need `/p:RestorePackagesConfig=true`.
 
-### 3. Build + version: `build.ps1 -Version %build.number%`
+### 3. SonarQube begin (optional, see [SonarQube](#sonarqube-third-party-code-analysis))
+Runs only when `sonar.enabled` is `true`; skipped otherwise.
+
+### 4. Build + version: `build.ps1 -Version %build.number%`
 - **What:** compiles in Release, stamps the version, and publishes the site.
 - **How:**
   1. Replaces `AssemblyInformationalVersion("local-dev")` in `src/DemoApp.Web/Properties/AssemblyInfo.cs` with `1.0.N`.
@@ -47,14 +50,18 @@ Steps run in order, and each runs only if every earlier step passed.
   3. A second MSBuild call with `DeployOnBuild=true`, `WebPublishMethod=FileSystem` and `PublishUrl=out/publish` copies only what the site needs (`Default.aspx`, `Health.ashx`, `Web.config`, `bin/`) to `out/publish`.
   4. At run time, `AppVersion.cs` reads the stamped version, so the page footer and `/Health.ashx` show `1.0.N`.
 
-### 4. Unit tests: `test.ps1`
+### 5. Unit tests: `test.ps1`
 - **What:** runs the NUnit tests for the business logic (`PriceCalculator`).
 - **How:**
-  - `dotnet test --no-build -c Release` tests exactly the binaries from step 3.
+  - `dotnet test --no-build -c Release` tests exactly the binaries from step 4.
   - `--logger trx` writes `TestResults/*.trx`. The **XML report processing** build feature reads that file and fills the **Tests** tab.
   - A failed test means a non-zero exit code, so the step fails, the rest is skipped, and there's no artifact.
 
-### 5. Quality gate: `quality-gate.ps1`
+### 6. SonarQube end (optional)
+Runs only when `sonar.enabled` is `true`; skipped otherwise.
+
+### 7. Quality gate: `quality-gate.ps1`
+Our own check, not SonarQube's Quality Gate.
 - **What:** fails the build if a config file under `src/` contains a hard-coded secret.
 - **How:**
   - Loads every `src/**/*.config` as XML.
@@ -64,7 +71,7 @@ Steps run in order, and each runs only if every earlier step passed.
   - Self-check: `scripts/tests/quality-gate.tests.ps1`.
 - **Not scanned:** `config/current/` holds the old pipeline's fake key on purpose. Delete that folder when the old pipeline goes.
 
-### 6. Publish artifact (no script)
+### Publish artifact (no script, after step 7)
 - **What:** stores **one** versioned zip, only for green builds.
 - **How:**
   - The artifact rule `out/publish/** => DemoApp.Web.%build.number%.zip` zips the publish folder.
@@ -112,9 +119,13 @@ Both come from the same template (`DeployBuild` in `settings.kts`), so they are 
 
 ---
 
-## SonarQube (demo 2 only, not yet run against a server)
+## SonarQube: third-party code analysis
 
-Code analysis, added by hand to the CI build in [build-from-scratch.md](build-from-scratch.md#chặng-6-sonarqube-dựng-server-và-nối-vào-ci-10-phút). It is **not** in `settings.kts`, so the imported project keeps working when SonarQube is off.
+**Not yet run against a server.** The CI build has two optional steps, **3. SonarQube begin** and **6. SonarQube end**, in `settings.kts`. Both carry the condition `sonar.enabled = true`, which is `false` by default, so the imported project works with SonarQube off. To use it, run **Run custom build** > **Parameters** and set `sonar.enabled` to `true`, or change the default in `settings.kts`. The same two steps are added by hand in [build-from-scratch.md](build-from-scratch.md#chặng-6-sonarqube-dựng-server-và-nối-vào-ci-10-phút).
+
+Parameters on the CI build: `sonar.url` (`http://localhost:9000`), `sonar.key` (`demoapp`), and the password parameter `env.SONAR_TOKEN`. The token comes from SonarQube (**My Account > Security**); store it as a TeamCity token (**Versioned Settings > Tokens**) and paste `credentialsJSON:...` into `settings.kts`.
+
+How the pieces connect: TeamCity checks the code out of GitHub on the agent, the scanner on the agent analyses it while MSBuild compiles, then uploads the result to the SonarQube server with the token.
 
 - **Server:** `sonarqube/docker-compose.yml` runs SonarQube Community Build on http://localhost:9000, reachable only from this PC. It uses the embedded database, so it is for demos only.
 - **`sonar-begin.ps1`, before the build:** restores the scanner pinned in `dotnet-tools.json`, then runs `dotnet sonarscanner begin`, which hooks into MSBuild. It needs `env.SONAR_TOKEN` and turns on `sonar.qualitygate.wait`.

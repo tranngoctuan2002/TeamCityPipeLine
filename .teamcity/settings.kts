@@ -136,6 +136,16 @@ object ImprovedCi : BuildType({
     artifactRules = "out/publish/** => DemoApp.Web.%build.number%.zip"
     publishArtifacts = PublishMode.SUCCESSFUL
 
+    // SonarQube: a third-party service the agent talks to. Off by default so the import works
+    // without a server; switch it on for one run in Run custom build > Parameters.
+    params {
+        param("sonar.enabled", "false")
+        param("sonar.url", "http://localhost:9000")
+        param("sonar.key", "demoapp")
+        // Generate in Versioned Settings > Tokens from the SonarQube token, paste "credentialsJSON:<token>".
+        password("env.SONAR_TOKEN", "credentialsJSON:c2ad7d96-d759-46c3-b75b-2657a09f7094")
+    }
+
     vcs {
         root(DemoRepo)
         cleanCheckout = true
@@ -151,17 +161,30 @@ object ImprovedCi : BuildType({
             scriptMode = file { path = "scripts/restore.ps1" }
         }
         powerShell {
-            name = "3. Build + version"
+            // Must run before the build: the scanner hooks into MSBuild.
+            name = "3. SonarQube begin"
+            scriptMode = file { path = "scripts/sonar-begin.ps1" }
+            scriptArgs = "-HostUrl %sonar.url% -ProjectKey %sonar.key% -Version %build.number%"
+            conditions { equals("sonar.enabled", "true") }
+        }
+        powerShell {
+            name = "4. Build + version"
             scriptMode = file { path = "scripts/build.ps1" }
             scriptArgs = "-Configuration Release -Version %build.number%"
         }
         powerShell {
-            name = "4. Unit tests"
+            name = "5. Unit tests"
             scriptMode = file { path = "scripts/test.ps1" }
             scriptArgs = "-Configuration Release"
         }
         powerShell {
-            name = "5. Quality gate"
+            // Uploads the analysis and waits for the SonarQube Quality Gate; a failed gate fails the build.
+            name = "6. SonarQube end"
+            scriptMode = file { path = "scripts/sonar-end.ps1" }
+            conditions { equals("sonar.enabled", "true") }
+        }
+        powerShell {
+            name = "7. Quality gate"
             scriptMode = file { path = "scripts/quality-gate.ps1" }
         }
     }
